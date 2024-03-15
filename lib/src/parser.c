@@ -1908,6 +1908,7 @@ bool ts_parser_set_language(TSParser *self, const TSLanguage *language) {
   }
 
   self->language = ts_language_copy(language);
+  ts_parser__external_scanner_create(self);
   ts_parser_reset(self);
   return true;
 }
@@ -1965,8 +1966,8 @@ const TSRange *ts_parser_included_ranges(const TSParser *self, uint32_t *count) 
 }
 
 void ts_parser_reset(TSParser *self) {
-  if (self->wasm_store) {
-    ts_wasm_store_reset(self->wasm_store);
+  if (self->language && self->language->external_scanner.deserialize) {
+    self->language->external_scanner.deserialize(self->external_scanner_payload, NULL, 0);
   }
 
   if (self->old_tree.ptr) {
@@ -2005,29 +2006,24 @@ TSTree *ts_parser_parse(
 
   if (ts_parser_has_outstanding_parse(self)) {
     LOG("resume_parsing");
-  } else {
-    ts_parser__external_scanner_create(self);
-    if (self->has_scanner_error) goto exit;
-
-    if (old_tree) {
-      ts_subtree_retain(old_tree->root);
-      self->old_tree = old_tree->root;
-      ts_range_array_get_changed_ranges(
-        old_tree->included_ranges, old_tree->included_range_count,
-        self->lexer.included_ranges, self->lexer.included_range_count,
-        &self->included_range_differences
-      );
-      reusable_node_reset(&self->reusable_node, old_tree->root);
-      LOG("parse_after_edit");
-      LOG_TREE(self->old_tree);
-      for (unsigned i = 0; i < self->included_range_differences.size; i++) {
-        TSRange *range = &self->included_range_differences.contents[i];
-        LOG("different_included_range %u - %u", range->start_byte, range->end_byte);
-      }
-    } else {
-      reusable_node_clear(&self->reusable_node);
-      LOG("new_parse");
+  } else if (old_tree) {
+    ts_subtree_retain(old_tree->root);
+    self->old_tree = old_tree->root;
+    ts_range_array_get_changed_ranges(
+      old_tree->included_ranges, old_tree->included_range_count,
+      self->lexer.included_ranges, self->lexer.included_range_count,
+      &self->included_range_differences
+    );
+    reusable_node_reset(&self->reusable_node, old_tree->root);
+    LOG("parse_after_edit");
+    LOG_TREE(self->old_tree);
+    for (unsigned i = 0; i < self->included_range_differences.size; i++) {
+      TSRange *range = &self->included_range_differences.contents[i];
+      LOG("different_included_range %u - %u", range->start_byte, range->end_byte);
     }
+  } else {
+    reusable_node_clear(&self->reusable_node);
+    LOG("new_parse");
   }
 
   self->operation_count = 0;
