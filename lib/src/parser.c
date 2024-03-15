@@ -1997,34 +1997,35 @@ TSTree *ts_parser_parse(
     ts_wasm_store_start(self->wasm_store, &self->lexer.data, self->language);
   }
 
-  ts_parser__external_scanner_create(self);
-  if (self->has_scanner_error) goto exit;
-
   ts_lexer_set_input(&self->lexer, input);
-
   array_clear(&self->included_range_differences);
   self->included_range_difference_index = 0;
 
   if (ts_parser_has_outstanding_parse(self)) {
     LOG("resume_parsing");
-  } else if (old_tree) {
-    ts_subtree_retain(old_tree->root);
-    self->old_tree = old_tree->root;
-    ts_range_array_get_changed_ranges(
-      old_tree->included_ranges, old_tree->included_range_count,
-      self->lexer.included_ranges, self->lexer.included_range_count,
-      &self->included_range_differences
-    );
-    reusable_node_reset(&self->reusable_node, old_tree->root);
-    LOG("parse_after_edit");
-    LOG_TREE(self->old_tree);
-    for (unsigned i = 0; i < self->included_range_differences.size; i++) {
-      TSRange *range = &self->included_range_differences.contents[i];
-      LOG("different_included_range %u - %u", range->start_byte, range->end_byte);
-    }
   } else {
-    reusable_node_clear(&self->reusable_node);
-    LOG("new_parse");
+    ts_parser__external_scanner_create(self);
+    if (self->has_scanner_error) goto exit;
+
+    if (old_tree) {
+      ts_subtree_retain(old_tree->root);
+      self->old_tree = old_tree->root;
+      ts_range_array_get_changed_ranges(
+        old_tree->included_ranges, old_tree->included_range_count,
+        self->lexer.included_ranges, self->lexer.included_range_count,
+        &self->included_range_differences
+      );
+      reusable_node_reset(&self->reusable_node, old_tree->root);
+      LOG("parse_after_edit");
+      LOG_TREE(self->old_tree);
+      for (unsigned i = 0; i < self->included_range_differences.size; i++) {
+        TSRange *range = &self->included_range_differences.contents[i];
+        LOG("different_included_range %u - %u", range->start_byte, range->end_byte);
+      }
+    } else {
+      reusable_node_clear(&self->reusable_node);
+      LOG("new_parse");
+    }
   }
 
   self->operation_count = 0;
