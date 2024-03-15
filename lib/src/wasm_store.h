@@ -9,8 +9,8 @@ extern "C" {
 #include "./parser.h"
 
 bool ts_wasm_store_start(TSWasmStore *, TSLexer *, const TSLanguage *);
-void ts_wasm_store_stop(TSWasmStore *);
-void ts_wasm_store_reset_heap(TSWasmStore *self);
+void ts_wasm_store_reset(TSWasmStore *);
+bool ts_wasm_store_has_error(const TSWasmStore *);
 
 bool ts_wasm_store_call_lex_main(TSWasmStore *, TSStateId);
 bool ts_wasm_store_call_lex_keyword(TSWasmStore *, TSStateId);
@@ -20,7 +20,6 @@ void ts_wasm_store_call_scanner_destroy(TSWasmStore *, uint32_t);
 bool ts_wasm_store_call_scanner_scan(TSWasmStore *, uint32_t, uint32_t);
 uint32_t ts_wasm_store_call_scanner_serialize(TSWasmStore *, uint32_t, char *);
 void ts_wasm_store_call_scanner_deserialize(TSWasmStore *, uint32_t, const char *, unsigned);
-bool ts_wasm_store_failed(const TSWasmStore *);
 
 void ts_wasm_language_retain(const TSLanguage *);
 void ts_wasm_language_release(const TSLanguage *);
