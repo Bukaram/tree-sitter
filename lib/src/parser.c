@@ -1830,6 +1830,7 @@ static unsigned ts_parser__condense_stack(TSParser *self) {
 
 static bool ts_parser_has_outstanding_parse(TSParser *self) {
   return (
+    self->external_scanner_payload ||
     ts_stack_state(self->stack, 0) != 1 ||
     ts_stack_node_count_since_error(self->stack, 0) != 0
   );
@@ -1892,7 +1893,7 @@ const TSLanguage *ts_parser_language(const TSParser *self) {
 }
 
 bool ts_parser_set_language(TSParser *self, const TSLanguage *language) {
-  ts_parser__external_scanner_destroy(self);
+  ts_parser_reset(self);
   ts_language_delete(self->language);
   self->language = NULL;
 
@@ -1911,7 +1912,6 @@ bool ts_parser_set_language(TSParser *self, const TSLanguage *language) {
   }
 
   self->language = ts_language_copy(language);
-  ts_parser_reset(self);
   return true;
 }
 
@@ -1968,6 +1968,7 @@ const TSRange *ts_parser_included_ranges(const TSParser *self, uint32_t *count) 
 }
 
 void ts_parser_reset(TSParser *self) {
+  ts_parser__external_scanner_destroy(self);
   if (self->wasm_store) {
     ts_wasm_store_reset(self->wasm_store);
   }
